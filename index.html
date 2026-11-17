@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPv4 Subnet Calculator — Jodies Style</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#151f32',
+                            925: '#0b1120',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar & Technical UI Details */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .font-mono-tech {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+        /* Highlight styling for Network vs Host bits (Jodies Signature Feature) */
+        .bit-net {
+            color: #ef4444; /* Red-500 */
+            font-weight: 600;
+        }
+        .dark .bit-net {
+            color: #f87171; /* Red-400 */
+        }
+        .bit-host {
+            color: #16a34a; /* Green-600 */
+        }
+        .dark .bit-host {
+            color: #4ade80; /* Green-400 */
+        }
+        .bit-dot {
+            color: #94a3b8;
+            margin: 0 2px;
+        }
+        /* Subtle Toast Animation */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .toast-enter {
+            animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Top Navigation / Header -->
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-slate-900 dark:bg-blue-600 text-white flex items-center justify-center shadow-inner">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg sm:text-xl font-bold tracking-tight">IPv4 Subnet Calculator</h1>
+                        <span class="text-[11px] font-mono-tech uppercase tracking-wider px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">CIDR / VLSM</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Network Address, Bitwise Binary & Subnet Splitter (Jodies Inspired)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Quick Preset Dropdown -->
+                <div class="relative">
+                    <select id="presetSelect" aria-label="Contoh Cepat" class="text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                        <option value="">⚡ Contoh Cepat...</option>
+                        <option value="192.168.1.10|24|">192.168.1.10 /24 (Class C LAN)</option>
+                        <option value="10.24.16.5|16|24">10.24.16.5 /16 → /24 (Subnetting)</option>
+                        <option value="172.16.45.130|26|">172.16.45.130 /26 (VLSM Sub-block)</option>
+                        <option value="10.0.0.1|30|">10.0.0.1 /30 (Point-to-Point Link)</option>
+                        <option value="10.0.0.2|31|">10.0.0.2 /31 (RFC 3021 P2P)</option>
+                        <option value="8.8.8.8|24|">8.8.8.8 /24 (Public IP)</option>
+                    </select>
+                </div>
+
+                <!-- Theme Toggle Button -->
+                <button id="themeToggle" type="button" title="Ubah Tema Gelap / Terang" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                    <!-- Sun Icon (shown in dark mode) -->
+                    <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 hidden dark:block text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <!-- Moon Icon (shown in light mode) -->
+                    <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 block dark:hidden text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+        <!-- Calculator Input Panel -->
+        <section class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 sm:p-6">
+            <form id="ipCalcForm" class="space-y-5" novalidate>
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    
+                    <!-- IP Address Input -->
+                    <div class="md:col-span-5">
+                        <label for="ipInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                            Address (Host atau Network IPv4)
+                        </label>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="ipInput" 
+                                value="192.168.1.1" 
+                                placeholder="Contoh: 192.168.1.1 atau 192.168.1.1/24"
+                                autocomplete="off"
+                                spellcheck="false"
+                                class="w-full font-mono-tech text-base px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Primary Netmask (CIDR Dropdown + Manual Input Sync) -->
+                    <div class="md:col-span-4">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="netmaskSelect" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                                Netmask (Bit / Desimal)
+                            </label>
+                            <button type="button" id="toggleManualMaskBtn" class="text-[11px] font-medium text-blue-600 dark:text-blue-400 hover:underline">
+                                Input Manual Mask
+                            </button>
+                        </div>
+                        <select id="netmaskSelect" class="w-full font-mono-tech text-sm sm:text-base px-3 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                            <!-- Populated by JS (/0 to /32) -->
+                        </select>
+                        <input 
+                            type="text" 
+                            id="netmaskManualInput" 
+                            placeholder="Contoh: 255.255.255.0 atau 24"
+                            class="hidden w-full font-mono-tech text-base px-3.5 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <!-- Move To / Subnetting Splitter (Secondary Netmask) -->
+                    <div class="md:col-span-3">
+                        <label for="moveToSelect" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                            Move to (Subnetting)
+                        </label>
+                        <select id="moveToSelect" class="w-full font-mono-tech text-sm sm:text-base px-3 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+                            <option value="">-- Tidak dipecah --</option>
+                            <!-- Populated by JS (/0 to /32) -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Error Banner (Hidden by default) -->
+                <div id="errorBox" role="alert" class="hidden rounded-lg bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300 flex items-center gap-2.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                    <span id="errorMessage">Format IP Address tidak valid.</span>
+                </div>
+
+                <!-- Action Buttons & Legend -->
+                <div class="flex flex-wrap items-center justify-between gap-4 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                    <div class="flex items-center gap-2.5">
+                        <button type="submit" id="calculateBtn" class="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm shadow-sm transition flex items-center gap-2 cursor-pointer">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            Calculate
+                        </button>
+                        <button type="button" id="resetBtn" class="px-4 py-2.5 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-medium text-sm transition cursor-pointer">
+                            Reset
+                        </button>
+                    </div>
+
+                    <!-- Binary Color Legend -->
+                    <div class="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
+                        <span class="font-medium">Legenda Biner:</span>
+                        <span class="inline-flex items-center gap-1.5 font-mono-tech">
+                            <span class="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block"></span>
+                            <span class="bit-net">11000000</span> = Network Bits
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 font-mono-tech">
+                            <span class="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block"></span>
+                            <span class="bit-host">00000001</span> = Host Bits
+                        </span>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- Primary Results Table (Jodies IP Calc Core Output) -->
+        <section id="resultSection" class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                        Hasil Analisis Jaringan
+                    </h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="copyAllBtn" class="text-xs font-medium px-3 py-1.5 rounded-md bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition flex items-center gap-1.5 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Salin Semua Hasil
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50/60 dark:bg-slate-900/50">
+                            <th class="py-3 px-4 sm:px-5 w-36 sm:w-44">Parameter</th>
+                            <th class="py-3 px-4 sm:px-5">Nilai Desimal / Info</th>
+                            <th class="py-3 px-4 sm:px-5">Representasi Biner (32-Bit)</th>
+                            <th class="py-3 px-4 text-right w-20">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultTableBody" class="divide-y divide-slate-200/80 dark:divide-slate-800/80 text-sm">
+                        <!-- Rendered dynamically by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Secondary Section: Subnetting / Supernetting Transition ("Move to") -->
+        <section id="subnettingSection" class="hidden bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div class="px-5 py-3.5 bg-indigo-50/70 dark:bg-indigo-950/30 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <h2 id="subnettingTitle" class="text-sm font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
+                        Subnets after transition
+                    </h2>
+                    <p id="subnettingSubtitle" class="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                        Memecah jaringan utama menjadi blok subnet yang lebih kecil.
+                    </p>
+                </div>
+                <span id="subnetCountBadge" class="font-mono-tech text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800">
+                    0 Subnets
+                </span>
+            </div>
+
+            <!-- Supernetting / Single Block Output (when target CIDR < source CIDR) -->
+            <div id="supernetContainer" class="hidden p-5"></div>
+
+            <!-- Subnets List Table (when target CIDR > source CIDR) -->
+            <div id="subnetsTableWrapper" class="overflow-x-auto max-h-[520px] overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 bg-slate-100 dark:bg-slate-850 z-10 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                        <tr>
+                            <th class="py-2.5 px-4 w-14">#</th>
+                            <th class="py-2.5 px-4">Network</th>
+                            <th class="py-2.5 px-4">HostMin</th>
+                            <th class="py-2.5 px-4">HostMax</th>
+                            <th class="py-2.5 px-4">Broadcast</th>
+                            <th class="py-2.5 px-4 text-right">Hosts/Net</th>
+                            <th class="py-2.5 px-4 text-right w-16">Salin</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subnetsTableBody" class="divide-y divide-slate-200/70 dark:divide-slate-800/70 font-mono-tech text-xs sm:text-sm">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="subnetTruncationNotice" class="hidden px-5 py-3 bg-amber-50 dark:bg-amber-950/40 border-t border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-3">
+                <span id="truncationText">Menampilkan 256 subnet pertama untuk menjaga performa browser.</span>
+                <button type="button" id="showMoreSubnetsBtn" class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-semibold shrink-0 cursor-pointer">
+                    Muat +256 Lagi
+                </button>
+            </div>
+        </section>
+
+        <!-- Calculation History Section -->
+        <section class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                        Riwayat Perhitungan Cepat
+                    </h3>
+                </div>
+                <button type="button" id="clearHistoryBtn" class="text-xs text-slate-500 hover:text-red-500 transition cursor-pointer">
+                    Hapus Riwayat
+                </button>
+            </div>
+            <div id="historyContainer" class="flex flex-wrap gap-2">
+                <span class="text-xs text-slate-400 italic">Belum ada riwayat perhitungan.</span>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 text-center sm:text-left border-t border-slate-200 dark:border-slate-800/80 text-xs text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <p>IPv4 Subnet & CIDR Calculator — Bitwise Unsigned 32-bit Engine</p>
+        <p class="font-mono-tech">RFC 1918 • RFC 3021 (/31) • RFC 3927 • RFC 6598</p>
+    </footer>
+
+    <!-- Floating Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 hidden items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 dark:bg-slate-800 text-white text-xs font-medium shadow-lg border border-slate-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+        </svg>
+        <span id="toastMessage">Tersalin ke clipboard!</span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        /**
+         * ============================================================================
+         * MODULE 1: IPv4 BITWISE MATH & NETWORK ENGINE
+         * Menggunakan operasi bitwise 32-bit unsigned (>>> 0) untuk akurasi tinggi.
+         * ============================================================================
+         */
+        const IPCalcEngine = (() => {
+            // Validasi string IPv4 (4 oktet desimal 0-255 tanpa leading zero aneh)
+            function isValidIPv4(ipStr) {
+                if (typeof ipStr !== 'string') return false;
+                const parts = ipStr.trim().split('.');
+                if (parts.length !== 4) return false;
+                return parts.every(part => {
+                    if (!/^\d{1,3}$/.test(part)) return false;
+                    if (part.length > 1 && part.startsWith('0')) return false;
+                    const num = Number(part);
+                    return num >= 0 && num <= 255;
+                });
+            }
+
+            // Konversi IPv4 string ke integer 32-bit unsigned
+            function ipToInt(ipStr) {
+                const parts = ipStr.trim().split('.').map(Number);
+                return (((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0);
+            }
+
+            // Konversi integer 32-bit unsigned ke IPv4 string
+            function intToIp(intVal) {
+                const unsigned = intVal >>> 0;
+                return [
+                    (unsigned >>> 24) & 255,
+                    (unsigned >>> 16) & 255,
+                    (unsigned >>> 8) & 255,
+                    unsigned & 255
+                ].join('.');
+            }
+
+            // Konversi integer 32-bit ke Hexadecimal (format: C0.A8.01.01)
+            function intToHex(intVal) {
+                const unsigned = intVal >>> 0;
+                return [
+                    ((unsigned >>> 24) & 255).toString(16).toUpperCase().padStart(2, '0'),
+                    ((unsigned >>> 16) & 255).toString(16).toUpperCase().padStart(2, '0'),
+                    ((unsigned >>> 8) & 255).toString(16).toUpperCase().padStart(2, '0'),
+                    (unsigned & 255).toString(16).toUpperCase().padStart(2, '0')
+                ].join('.');
+            }
+
+            // Konversi CIDR (0 - 32) ke 32-bit unsigned netmask
+            function cidrToMaskInt(cidr) {
+                if (cidr === 0) return 0;
+                return ((0xFFFFFFFF << (32 - cidr)) >>> 0);
+            }
+
+            // Validasi Netmask desimal (harus bit 1 kontinu diikuti bit 0 kontinu) dan kembalikan CIDR
+            function maskIpToCidr(maskStr) {
+                if (!isValidIPv4(maskStr)) return null;
+                const maskInt = ipToInt(maskStr);
+                if (maskInt === 0) return 0;
+                // Bitwise check: invers mask + 1 harus merupakan pangkat dari 2
+                const inv = (~maskInt) >>> 0;
+                if (((inv + 1) & inv) !== 0) return null;
+                // Hitung jumlah bit 1
+                let cidr = 0;
+                let temp = maskInt;
+                while (temp !== 0) {
+                    cidr += (temp & 1);
+                    temp >>>= 1;
+                }
+                return cidr;
+            }
+
+            // Identifikasi Kelas IP (Class A, B, C, D, E) berdasarkan bit pertama
+            function getIpClass(ipInt) {
+                const firstOctet = (ipInt >>> 24) & 255;
+                if ((firstOctet & 0x80) === 0) return { name: 'Class A', range: '0.0.0.0 - 127.255.255.255', defaultCidr: 8 };
+                if ((firstOctet & 0xC0) === 0x80) return { name: 'Class B', range: '128.0.0.0 - 191.255.255.255', defaultCidr: 16 };
+                if ((firstOctet & 0xE0) === 0xC0) return { name: 'Class C', range: '192.0.0.0 - 223.255.255.255', defaultCidr: 24 };
+                if ((firstOctet & 0xF0) === 0xE0) return { name: 'Class D (Multicast)', range: '224.0.0.0 - 239.255.255.255', defaultCidr: null };
+                return { name: 'Class E (Experimental)', range: '240.0.0.0 - 255.255.255.255', defaultCidr: null };
+            }
+
+            // Identifikasi Scope / Special IP Range (RFC 1918, Loopback, Link-Local, CGNAT, dll)
+            function getIpScope(ipInt) {
+                const o1 = (ipInt >>> 24) & 255;
+                const o2 = (ipInt >>> 16) & 255;
+                const o3 = (ipInt >>> 8) & 255;
+
+                if (o1 === 0) return { label: 'Current Network (RFC 1122)', type: 'special' };
+                if (o1 === 10) return { label: 'Private Internet (RFC 1918)', type: 'private' };
+                if (o1 === 100 && o2 >= 64 && o2 <= 127) return { label: 'Shared Address Space / CGNAT (RFC 6598)', type: 'special' };
+                if (o1 === 127) return { label: 'Loopback Address (RFC 1122)', type: 'special' };
+                if (o1 === 169 && o2 === 254) return { label: 'Link-Local / APIPA (RFC 3927)', type: 'special' };
+                if (o1 === 172 && o2 >= 16 && o2 <= 31) return { label: 'Private Internet (RFC 1918)', type: 'private' };
+                if (o1 === 192 && o2 === 0 && o3 === 0) return { label: 'IETF Protocol Assignments (RFC 6890)', type: 'special' };
+                if (o1 === 192 && o2 === 0 && o3 === 2) return { label: 'TEST-NET-1 Documentation (RFC 5737)', type: 'special' };
+                if (o1 === 192 && o2 === 168) return { label: 'Private Internet (RFC 1918)', type: 'private' };
+                if (o1 === 198 && (o2 === 18 || o2 === 19)) return { label: 'Network Interconnect Benchmark (RFC 2544)', type: 'special' };
+                if (o1 === 198 && o2 === 51 && o3 === 100) return { label: 'TEST-NET-2 Documentation (RFC 5737)', type: 'special' };
+                if (o1 === 203 && o2 === 0 && o3 === 113) return { label: 'TEST-NET-3 Documentation (RFC 5737)', type: 'special' };
+                if (o1 >= 224 && o1 <= 239) return { label: 'Multicast (RFC 5771)', type: 'multicast' };
+                if (ipInt === 0xFFFFFFFF) return { label: 'Limited Broadcast (RFC 919)', type: 'special' };
+                if (o1 >= 240) return { label: 'Reserved for Future Use (RFC 1112)', type: 'special' };
+
+                return { label: 'Public Internet (Routable)', type: 'public' };
+            }
+
+            // Perhitungan lengkap untuk 1 blok jaringan IPv4
+            function calculate(ipStr, cidr) {
+                const ipInt = ipToInt(ipStr);
+                const maskInt = cidrToMaskInt(cidr);
+                const wildcardInt = (~maskInt) >>> 0;
+                const networkInt = (ipInt & maskInt) >>> 0;
+                const broadcastInt = (networkInt | wildcardInt) >>> 0;
+
+                const hostBits = 32 - cidr;
+                const totalAddresses = Math.pow(2, hostBits);
+
+                let hostMinInt, hostMaxInt, usableHosts, specialNote = '';
+
+                if (cidr === 32) {
+                    // Single Host Route (/32)
+                    hostMinInt = networkInt;
+                    hostMaxInt = networkInt;
+                    usableHosts = 1;
+                    specialNote = 'Host Route (/32)';
+                } else if (cidr === 31) {
+                    // RFC 3021 Point-to-Point Link (/31)
+                    hostMinInt = networkInt;
+                    hostMaxInt = broadcastInt;
+                    usableHosts = 2;
+                    specialNote = 'PtP Link (RFC 3021)';
+                } else {
+                    hostMinInt = (networkInt + 1) >>> 0;
+                    hostMaxInt = (broadcastInt - 1) >>> 0;
+                    usableHosts = Math.max(0, totalAddresses - 2);
+                }
+
+                const ipClass = getIpClass(ipInt);
+                const scope = getIpScope(ipInt);
+
+                return {
+                    cidr,
+                    hostBits,
+                    ipInt,
+                    ipStr: intToIp(ipInt),
+                    ipHex: intToHex(ipInt),
+                    maskInt,
+                    maskStr: intToIp(maskInt),
+                    maskHex: intToHex(maskInt),
+                    wildcardInt,
+                    wildcardStr: intToIp(wildcardInt),
+                    wildcardHex: intToHex(wildcardInt),
+                    networkInt,
+                    networkStr: intToIp(networkInt),
+                    networkHex: intToHex(networkInt),
+                    broadcastInt,
+                    broadcastStr: intToIp(broadcastInt),
+                    broadcastHex: intToHex(broadcastInt),
+                    hostMinInt,
+                    hostMinStr: intToIp(hostMinInt),
+                    hostMaxInt,
+                    hostMaxStr: intToIp(hostMaxInt),
+                    totalAddresses,
+                    usableHosts,
+                    specialNote,
+                    ipClass,
+                    scope
+                };
+            }
+
+            return {
+                isValidIPv4,
+                ipToInt,
+                intToIp,
+                intToHex,
+                cidrToMaskInt,
+                maskIpToCidr,
+                calculate
+            };
+        })();
+
+
+        /**
+         * ============================================================================
+         * MODULE 2: UI RENDERER & APPLICATION CONTROLLER
+         * ============================================================================
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM References
+            const form = document.getElementById('ipCalcForm');
+            const ipInput = document.getElementById('ipInput');
+            const netmaskSelect = document.getElementById('netmaskSelect');
+            const netmaskManualInput = document.getElementById('netmaskManualInput');
+            const toggleManualMaskBtn = document.getElementById('toggleManualMaskBtn');
+            const moveToSelect = document.getElementById('moveToSelect');
+            const resetBtn = document.getElementById('resetBtn');
+            const presetSelect = document.getElementById('presetSelect');
+            const themeToggle = document.getElementById('themeToggle');
+            
+            const errorBox = document.getElementById('errorBox');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            const resultTableBody = document.getElementById('resultTableBody');
+            const copyAllBtn = document.getElementById('copyAllBtn');
+            
+            const subnettingSection = document.getElementById('subnettingSection');
+            const subnettingTitle = document.getElementById('subnettingTitle');
+            const subnettingSubtitle = document.getElementById('subnettingSubtitle');
+            const subnetCountBadge = document.getElementById('subnetCountBadge');
+            const supernetContainer = document.getElementById('supernetContainer');
+            const subnetsTableWrapper = document.getElementById('subnetsTableWrapper');
+            const subnetsTableBody = document.getElementById('subnetsTableBody');
+            const subnetTruncationNotice = document.getElementById('subnetTruncationNotice');
+            const truncationText = document.getElementById('truncationText');
+            const showMoreSubnetsBtn = document.getElementById('showMoreSubnetsBtn');
+
+            const historyContainer = document.getElementById('historyContainer');
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+
+            // Application State
+            let isManualMaskMode = false;
+            let lastCalculation = null;
+            let subnetPaginationState = {
+                baseNetworkInt: 0,
+                targetCidr: 24,
+                totalSubnets: 0,
+                renderedCount: 0,
+                batchSize: 256
+            };
+            let historyList = JSON.parse(localStorage.getItem('ipcalc_history_v1') || '[]');
+
+            // 1. Populate CIDR Dropdowns (/0 to /32)
+            function populateDropdowns() {
+                for (let cidr = 0; cidr <= 32; cidr++) {
+                    const maskStr = IPCalcEngine.intToIp(IPCalcEngine.cidrToMaskInt(cidr));
+                    const label = `${maskStr} = /${cidr}`;
+                    
+                    const opt1 = document.createElement('option');
+                    opt1.value = cidr;
+                    opt1.textContent = label;
+                    if (cidr === 24) opt1.selected = true;
+                    netmaskSelect.appendChild(opt1);
+
+                    const opt2 = document.createElement('option');
+                    opt2.value = cidr;
+                    opt2.textContent = label;
+                    moveToSelect.appendChild(opt2);
+                }
+            }
+
+            // 2. Format 32-bit integer into color-coded Jodies Binary HTML (Network Red vs Host Green)
+            function formatBinaryHTML(intVal, cidr, forceAllNet = false) {
+                const bin32 = (intVal >>> 0).toString(2).padStart(32, '0');
+                let html = '';
+                for (let i = 0; i < 32; i++) {
+                    if (i > 0 && i % 8 === 0) {
+                        html += '<span class="bit-dot">.</span>';
+                    }
+                    const bit = bin32[i];
+                    const isNetBit = forceAllNet || i < cidr;
+                    html += `<span class="${isNetBit ? 'bit-net' : 'bit-host'}">${bit}</span>`;
+                }
+                return html;
+            }
+
+            // Plain 32-bit dotted binary for clipboard copy
+            function formatBinaryPlain(intVal) {
+                const bin32 = (intVal >>> 0).toString(2).padStart(32, '0');
+                return bin32.match(/.{1,8}/g).join('.');
+            }
+
+            // 3. Clipboard Utility (Using execCommand fallback for iframe compatibility)
+            function copyToClipboard(text, label = 'Teks') {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast(`${label} berhasil disalin!`);
+                } catch (err) {
+                    showToast('Gagal menyalin teks.');
+                }
+                document.body.removeChild(textarea);
+            }
+
+            let toastTimer;
+            function showToast(msg) {
+                toastMessage.textContent = msg;
+                toast.classList.remove('hidden');
+                toast.classList.add('flex', 'toast-enter');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => {
+                    toast.classList.add('hidden');
+                    toast.classList.remove('flex', 'toast-enter');
+                }, 2200);
+            }
+
+            // 4. Error Handling UI
+            function showError(msg) {
+                errorMessage.textContent = msg;
+                errorBox.classList.remove('hidden');
+            }
+            function hideError() {
+                errorBox.classList.add('hidden');
+            }
+
+            // 5. Render Primary Jodies-Style Result Table
+            function renderPrimaryResults(res) {
+                // Scope badge styling
+                let scopeBadgeClass = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700';
+                if (res.scope.type === 'private') {
+                    scopeBadgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 dark:border-amber-800';
+                } else if (res.scope.type === 'public') {
+                    scopeBadgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800';
+                } else if (res.scope.type === 'multicast') {
+                    scopeBadgeClass = 'bg-purple-100 text-purple-800 dark:bg-purple-950/80 dark:text-purple-300 border-purple-300 dark:border-purple-800';
+                }
+
+                const rows = [
+                    {
+                        param: 'Address',
+                        decimalHTML: `<span class="font-bold text-slate-900 dark:text-white">${res.ipStr}</span> <span class="text-xs text-slate-400 ml-1">(Hex: ${res.ipHex})</span>`,
+                        binaryHTML: formatBinaryHTML(res.ipInt, res.cidr),
+                        copyVal: res.ipStr
+                    },
+                    {
+                        param: 'Netmask',
+                        decimalHTML: `<span class="font-semibold text-blue-600 dark:text-blue-400">${res.maskStr} = ${res.cidr}</span> <span class="text-xs text-slate-400 ml-1">(Hex: ${res.maskHex})</span>`,
+                        binaryHTML: formatBinaryHTML(res.maskInt, res.cidr),
+                        copyVal: `${res.maskStr} (/${res.cidr})`
+                    },
+                    {
+                        param: 'Wildcard',
+                        decimalHTML: `<span>${res.wildcardStr}</span> <span class="text-xs text-slate-400 ml-1">(Hex: ${res.wildcardHex})</span>`,
+                        binaryHTML: formatBinaryHTML(res.wildcardInt, res.cidr),
+                        copyVal: res.wildcardStr
+                    },
+                    {
+                        param: 'Network',
+                        decimalHTML: `
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-bold text-red-600 dark:text-red-400">${res.networkStr}/${res.cidr}</span>
+                                <span class="text-[11px] font-sans font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">${res.ipClass.name}</span>
+                            </div>
+                        `,
+                        binaryHTML: formatBinaryHTML(res.networkInt, res.cidr),
+                        copyVal: `${res.networkStr}/${res.cidr}`
+                    },
+                    {
+                        param: 'HostMin',
+                        decimalHTML: `<span class="font-semibold text-emerald-600 dark:text-emerald-400">${res.hostMinStr}</span>`,
+                        binaryHTML: formatBinaryHTML(res.hostMinInt, res.cidr),
+                        copyVal: res.hostMinStr
+                    },
+                    {
+                        param: 'HostMax',
+                        decimalHTML: `<span class="font-semibold text-emerald-600 dark:text-emerald-400">${res.hostMaxStr}</span>`,
+                        binaryHTML: formatBinaryHTML(res.hostMaxInt, res.cidr),
+                        copyVal: res.hostMaxStr
+                    },
+                    {
+                        param: 'Broadcast',
+                        decimalHTML: res.cidr >= 31 
+                            ? `<span class="text-slate-400 italic">N/A (${res.specialNote})</span>` 
+                            : `<span class="font-semibold text-slate-800 dark:text-slate-200">${res.broadcastStr}</span>`,
+                        binaryHTML: res.cidr >= 31 
+                            ? `<span class="text-slate-400 text-xs font-sans">Tidak menggunakan broadcast address</span>`
+                            : formatBinaryHTML(res.broadcastInt, res.cidr),
+                        copyVal: res.cidr >= 31 ? 'N/A' : res.broadcastStr
+                    },
+                    {
+                        param: 'Hosts/Net',
+                        decimalHTML: `
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-bold text-base text-slate-900 dark:text-white">${res.usableHosts.toLocaleString('id-ID')}</span>
+                                <span class="text-xs font-sans text-slate-500 dark:text-slate-400">(Total IP: ${res.totalAddresses.toLocaleString('id-ID')})</span>
+                                <span class="text-[11px] font-sans font-semibold px-2 py-0.5 rounded border ${scopeBadgeClass}">${res.scope.label}</span>
+                            </div>
+                        `,
+                        binaryHTML: `<span class="text-xs font-sans text-slate-500 dark:text-slate-400">Host Bits: <strong class="font-mono-tech text-slate-700 dark:text-slate-200">${res.hostBits} bit</strong> (2<sup>${res.hostBits}</sup>${res.cidr < 31 ? ' - 2' : ''})</span>`,
+                        copyVal: res.usableHosts.toString()
+                    }
+                ];
+
+                resultTableBody.innerHTML = rows.map(row => `
+                    <tr class="hover:bg-slate-50/90 dark:hover:bg-slate-850/70 transition-colors group">
+                        <td class="py-3 px-4 sm:px-5 font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            ${row.param}
+                        </td>
+                        <td class="py-3 px-4 sm:px-5 font-mono-tech text-sm">
+                            ${row.decimalHTML}
+                        </td>
+                        <td class="py-3 px-4 sm:px-5 font-mono-tech text-xs sm:text-sm tracking-tight whitespace-nowrap">
+                            ${row.binaryHTML}
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <button type="button" data-copy="${row.copyVal}" data-label="${row.param}" class="copy-row-btn opacity-80 group-hover:opacity-100 px-2.5 py-1 rounded text-xs font-medium bg-slate-100 hover:bg-blue-600 text-slate-600 hover:text-white dark:bg-slate-800 dark:hover:bg-blue-600 dark:text-slate-300 dark:hover:text-white transition cursor-pointer">
+                                Copy
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Attach row copy listeners
+                document.querySelectorAll('.copy-row-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        copyToClipboard(btn.dataset.copy, btn.dataset.label);
+                    });
+                });
+            }
+
+            // 6. Render Subnetting / Supernetting ("Move to" feature)
+            function renderTransition(res, targetCidr) {
+                if (targetCidr === null || targetCidr === '' || isNaN(targetCidr) || targetCidr === res.cidr) {
+                    subnettingSection.classList.add('hidden');
+                    return;
+                }
+
+                subnettingSection.classList.remove('hidden');
+
+                // CASE A: Supernetting / Aggregating (targetCidr < sourceCidr)
+                if (targetCidr < res.cidr) {
+                    const superRes = IPCalcEngine.calculate(res.networkStr, targetCidr);
+                    subnettingTitle.textContent = `Supernetting / Route Aggregation (/${res.cidr} → /${targetCidr})`;
+                    subnettingSubtitle.textContent = `Menggabungkan ${Math.pow(2, res.cidr - targetCidr).toLocaleString('id-ID')} blok /${res.cidr} menjadi satu blok jaringan induk /${targetCidr}.`;
+                    subnetCountBadge.textContent = `1 Supernet Block`;
+
+                    subnetsTableWrapper.classList.add('hidden');
+                    subnetTruncationNotice.classList.add('hidden');
+                    supernetContainer.classList.remove('hidden');
+
+                    supernetContainer.innerHTML = `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono-tech text-sm">
+                            <div class="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                                <div class="text-[11px] font-sans uppercase text-slate-500 mb-1">Supernet Network</div>
+                                <div class="font-bold text-red-600 dark:text-red-400">${superRes.networkStr}/${superRes.cidr}</div>
+                            </div>
+                            <div class="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                                <div class="text-[11px] font-sans uppercase text-slate-500 mb-1">New Netmask</div>
+                                <div class="font-semibold text-blue-600 dark:text-blue-400">${superRes.maskStr}</div>
+                            </div>
+                            <div class="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                                <div class="text-[11px] font-sans uppercase text-slate-500 mb-1">Usable Host Range</div>
+                                <div class="text-xs text-emerald-600 dark:text-emerald-400">${superRes.hostMinStr} - ${superRes.hostMaxStr}</div>
+                            </div>
+                            <div class="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                                <div class="text-[11px] font-sans uppercase text-slate-500 mb-1">Total Hosts/Supernet</div>
+                                <div class="font-bold">${superRes.usableHosts.toLocaleString('id-ID')}</div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // CASE B: Subnetting Splitter (targetCidr > sourceCidr)
+                const borrowedBits = targetCidr - res.cidr;
+                const totalSubnets = Math.pow(2, borrowedBits);
+                const subSample = IPCalcEngine.calculate(res.networkStr, targetCidr);
+
+                subnettingTitle.textContent = `Subnets after transition from /${res.cidr} to /${targetCidr}`;
+                subnettingSubtitle.textContent = `Meminjam ${borrowedBits} bit host • Setiap subnet memiliki ${subSample.usableHosts.toLocaleString('id-ID')} usable hosts (${subSample.maskStr}).`;
+                subnetCountBadge.textContent = `${totalSubnets.toLocaleString('id-ID')} Subnets`;
+
+                supernetContainer.classList.add('hidden');
+                subnetsTableWrapper.classList.remove('hidden');
+                subnetsTableBody.innerHTML = '';
+
+                subnetPaginationState = {
+                    baseNetworkInt: res.networkInt,
+                    targetCidr: targetCidr,
+                    totalSubnets: totalSubnets,
+                    renderedCount: 0,
+                    batchSize: 256
+                };
+
+                appendSubnetRows();
+            }
+
+            function appendSubnetRows() {
+                const { baseNetworkInt, targetCidr, totalSubnets, renderedCount, batchSize } = subnetPaginationState;
+                const blockSize = Math.pow(2, 32 - targetCidr);
+                const endIdx = Math.min(totalSubnets, renderedCount + batchSize);
+
+                const fragment = document.createDocumentFragment();
+
+                for (let i = renderedCount; i < endIdx; i++) {
+                    const currentNetInt = (baseNetworkInt + (i * blockSize)) >>> 0;
+                    const sub = IPCalcEngine.calculate(IPCalcEngine.intToIp(currentNetInt), targetCidr);
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-850/70 transition-colors';
+                    const summaryText = `${sub.networkStr}/${sub.cidr} (${sub.hostMinStr} - ${sub.hostMaxStr})`;
+
+                    tr.innerHTML = `
+                        <td class="py-2 px-4 text-slate-400">${i + 1}</td>
+                        <td class="py-2 px-4 font-bold text-red-600 dark:text-red-400">${sub.networkStr}/${sub.cidr}</td>
+                        <td class="py-2 px-4 text-emerald-600 dark:text-emerald-400">${sub.hostMinStr}</td>
+                        <td class="py-2 px-4 text-emerald-600 dark:text-emerald-400">${sub.hostMaxStr}</td>
+                        <td class="py-2 px-4 text-slate-600 dark:text-slate-300">${sub.cidr >= 31 ? 'N/A' : sub.broadcastStr}</td>
+                        <td class="py-2 px-4 text-right font-semibold">${sub.usableHosts.toLocaleString('id-ID')}</td>
+                        <td class="py-2 px-4 text-right">
+                            <button type="button" class="sub-copy-btn px-2 py-0.5 rounded text-[11px] font-sans bg-slate-100 hover:bg-blue-600 text-slate-600 hover:text-white dark:bg-slate-800 dark:hover:bg-blue-600 dark:text-slate-300 transition cursor-pointer" data-copy="${summaryText}">
+                                Copy
+                            </button>
+                        </td>
+                    `;
+                    fragment.appendChild(tr);
+                }
+
+                subnetsTableBody.appendChild(fragment);
+                subnetPaginationState.renderedCount = endIdx;
+
+                // Bind copy buttons on newly added rows
+                subnetsTableBody.querySelectorAll('.sub-copy-btn:not([data-bound])').forEach(btn => {
+                    btn.dataset.bound = 'true';
+                    btn.addEventListener('click', () => copyToClipboard(btn.dataset.copy, 'Subnet'));
+                });
+
+                // Show or hide pagination bar
+                if (endIdx < totalSubnets) {
+                    subnetTruncationNotice.classList.remove('hidden');
+                    truncationText.textContent = `Menampilkan ${endIdx.toLocaleString('id-ID')} dari ${totalSubnets.toLocaleString('id-ID')} total subnet.`;
+                } else {
+                    subnetTruncationNotice.classList.add('hidden');
+                }
+            }
+
+            // 7. History Management
+            function addToHistory(ipStr, cidr, moveToCidr) {
+                const entry = {
+                    ip: ipStr,
+                    cidr: cidr,
+                    moveTo: moveToCidr !== null && moveToCidr !== '' ? Number(moveToCidr) : null,
+                    label: moveToCidr !== null && moveToCidr !== '' && Number(moveToCidr) !== cidr
+                        ? `${ipStr}/${cidr} → /${moveToCidr}`
+                        : `${ipStr}/${cidr}`
+                };
+
+                // Remove duplicate
+                historyList = historyList.filter(item => item.label !== entry.label);
+                historyList.unshift(entry);
+                if (historyList.length > 10) historyList.pop();
+
+                localStorage.setItem('ipcalc_history_v1', JSON.stringify(historyList));
+                renderHistory();
+            }
+
+            function renderHistory() {
+                if (historyList.length === 0) {
+                    historyContainer.innerHTML = `<span class="text-xs text-slate-400 italic">Belum ada riwayat perhitungan.</span>`;
+                    return;
+                }
+
+                historyContainer.innerHTML = historyList.map((item, idx) => `
+                    <button type="button" data-idx="${idx}" class="history-chip font-mono-tech text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950/60 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-blue-400 transition cursor-pointer">
+                        ${item.label}
+                    </button>
+                `).join('');
+
+                document.querySelectorAll('.history-chip').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const item = historyList[Number(btn.dataset.idx)];
+                        if (!item) return;
+                        ipInput.value = item.ip;
+                        setPrimaryCidr(item.cidr);
+                        moveToSelect.value = item.moveTo !== null ? item.moveTo : '';
+                        executeCalculation(false);
+                    });
+                });
+            }
+
+            function setPrimaryCidr(cidr) {
+                netmaskSelect.value = cidr;
+                netmaskManualInput.value = IPCalcEngine.intToIp(IPCalcEngine.cidrToMaskInt(cidr));
+            }
+
+            // 8. Main Calculation Trigger & Input Parsing
+            function executeCalculation(saveHistory = true) {
+                hideError();
+                let rawIp = ipInput.value.trim();
+                let cidr = null;
+
+                // Support inline CIDR notation inside IP box (e.g., "192.168.10.5/26")
+                if (rawIp.includes('/')) {
+                    const parts = rawIp.split('/');
+                    if (parts.length !== 2 || !/^\d{1,2}$/.test(parts[1].trim())) {
+                        showError('Format notasi CIDR pada kolom IP salah. Gunakan contoh: 192.168.1.1/24');
+                        return;
+                    }
+                    const parsedCidr = Number(parts[1].trim());
+                    if (parsedCidr < 0 || parsedCidr > 32) {
+                        showError('Prefix CIDR harus berada di antara /0 hingga /32.');
+                        return;
+                    }
+                    rawIp = parts[0].trim();
+                    cidr = parsedCidr;
+                    ipInput.value = rawIp;
+                    setPrimaryCidr(cidr);
+                }
+
+                // Validate IPv4 Address
+                if (!IPCalcEngine.isValidIPv4(rawIp)) {
+                    showError('Alamat IPv4 tidak valid! Pastikan terdiri dari 4 oktet angka 0–255 (contoh: 192.168.1.1).');
+                    return;
+                }
+
+                // Determine Netmask CIDR if not extracted from slash notation
+                if (cidr === null) {
+                    if (isManualMaskMode) {
+                        const manualVal = netmaskManualInput.value.trim().replace(/^\//, '');
+                        if (/^\d{1,2}$/.test(manualVal) && Number(manualVal) >= 0 && Number(manualVal) <= 32) {
+                            cidr = Number(manualVal);
+                        } else {
+                            cidr = IPCalcEngine.maskIpToCidr(manualVal);
+                        }
+                        if (cidr === null) {
+                            showError('Netmask manual tidak valid! Gunakan subnet mask yang sah (contoh: 255.255.255.0) atau prefix 0–32.');
+                            return;
+                        }
+                        netmaskSelect.value = cidr;
+                    } else {
+                        cidr = Number(netmaskSelect.value);
+                    }
+                }
+
+                // Perform Calculation
+                const result = IPCalcEngine.calculate(rawIp, cidr);
+                lastCalculation = result;
+
+                renderPrimaryResults(result);
+
+                const moveToRaw = moveToSelect.value;
+                const moveToCidr = moveToRaw === '' ? null : Number(moveToRaw);
+                renderTransition(result, moveToCidr);
+
+                if (saveHistory) {
+                    addToHistory(result.ipStr, cidr, moveToCidr);
+                }
+            }
+
+            // ============================================================================
+            // EVENT LISTENERS
+            // ============================================================================
+
+            // Form Submit (Calculate button & Enter key)
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                executeCalculation(true);
+            });
+
+            // Auto-calculate when dropdowns change
+            netmaskSelect.addEventListener('change', () => {
+                netmaskManualInput.value = IPCalcEngine.intToIp(IPCalcEngine.cidrToMaskInt(Number(netmaskSelect.value)));
+                executeCalculation(true);
+            });
+
+            moveToSelect.addEventListener('change', () => {
+                executeCalculation(true);
+            });
+
+            // Toggle between Dropdown Netmask and Manual Netmask Input
+            toggleManualMaskBtn.addEventListener('click', () => {
+                isManualMaskMode = !isManualMaskMode;
+                if (isManualMaskMode) {
+                    const currentCidr = Number(netmaskSelect.value);
+                    netmaskManualInput.value = IPCalcEngine.intToIp(IPCalcEngine.cidrToMaskInt(currentCidr));
+                    netmaskSelect.classList.add('hidden');
+                    netmaskManualInput.classList.remove('hidden');
+                    netmaskManualInput.focus();
+                    toggleManualMaskBtn.textContent = 'Gunakan Dropdown';
+                } else {
+                    netmaskManualInput.classList.add('hidden');
+                    netmaskSelect.classList.remove('hidden');
+                    toggleManualMaskBtn.textContent = 'Input Manual Mask';
+                }
+            });
+
+            // Reset Button
+            resetBtn.addEventListener('click', () => {
+                ipInput.value = '192.168.1.1';
+                setPrimaryCidr(24);
+                moveToSelect.value = '';
+                hideError();
+                executeCalculation(false);
+                showToast('Kalkulator di-reset ke default.');
+            });
+
+            // Quick Presets
+            presetSelect.addEventListener('change', () => {
+                if (!presetSelect.value) return;
+                const [ip, cidr, moveTo] = presetSelect.value.split('|');
+                ipInput.value = ip;
+                setPrimaryCidr(Number(cidr));
+                moveToSelect.value = moveTo || '';
+                executeCalculation(true);
+                presetSelect.value = '';
+            });
+
+            // Copy All Results Summary
+            copyAllBtn.addEventListener('click', () => {
+                if (!lastCalculation) return;
+                const r = lastCalculation;
+                const text = [
+                    `Address:   ${r.ipStr} (${formatBinaryPlain(r.ipInt)})`,
+                    `Netmask:   ${r.maskStr} = ${r.cidr} (${formatBinaryPlain(r.maskInt)})`,
+                    `Wildcard:  ${r.wildcardStr} (${formatBinaryPlain(r.wildcardInt)})`,
+                    `=>`,
+                    `Network:   ${r.networkStr}/${r.cidr} [${r.ipClass.name}]`,
+                    `HostMin:   ${r.hostMinStr}`,
+                    `HostMax:   ${r.hostMaxStr}`,
+                    `Broadcast: ${r.cidr >= 31 ? 'N/A' : r.broadcastStr}`,
+                    `Hosts/Net: ${r.usableHosts} (${r.scope.label})`
+                ].join('\n');
+                copyToClipboard(text, 'Seluruh tabel hasil');
+            });
+
+            // Pagination for large subnet splits
+            showMoreSubnetsBtn.addEventListener('click', () => {
+                appendSubnetRows();
+            });
+
+            // Clear History
+            clearHistoryBtn.addEventListener('click', () => {
+                historyList = [];
+                localStorage.removeItem('ipcalc_history_v1');
+                renderHistory();
+                showToast('Riwayat perhitungan dihapus.');
+            });
+
+            // Dark / Light Theme Toggle
+            themeToggle.addEventListener('click', () => {
+                const htmlEl = document.documentElement;
+                htmlEl.classList.toggle('dark');
+                localStorage.setItem('ipcalc_theme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
+            });
+
+            // Restore saved theme
+            if (localStorage.getItem('ipcalc_theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+            }
+
+            // Initialize App
+            populateDropdowns();
+            renderHistory();
+            executeCalculation(false);
+        });
+    </script>
+</body>
+</html>
